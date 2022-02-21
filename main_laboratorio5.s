@@ -51,7 +51,9 @@ PSECT udata_bank0
     contador:		DS 1
     valor:		DS 1	; Contiene valor a mostrar en los displays de 7-seg
     banderas:		DS 1	; Indica que display hay que encender
-    nibbles:		DS 2	; Contiene los nibbles alto y bajo de valor
+    centenas:		DS 1	; 
+    decenas:		DS 1
+    unidades:		DS 1
     display:		DS 3	; Representación de cada nibble en el display de 7-seg    
     
 PSECT resVect, class=CODE, abs, delta=2
@@ -96,8 +98,11 @@ MAIN:
 LOOP:
     MOVF    contador,W
     MOVWF   valor
-    CALL    OBTENER_NIBBLE	; Guardamos nibble alto y bajo de valor
+    CALL    OBTENER_DEC_CEN_UNI	; Guardamos nibble alto y bajo de valor
     CALL    SET_DISPLAY		; Guardamos los valores a enviar en PORTC para mostrar valor en hex
+    CLRF    centenas
+    CLRF    decenas
+    CLRF    unidades
     GOTO    LOOP	    
     
 ;------------- SUBRUTINAS ---------------
@@ -140,6 +145,7 @@ CONFIG_TMR0:
     BCF	    PORTD, 2		; Apagamos RD2
     CLRF    banderas		; Limpiamos GPR
     CLRF    valor
+    CLRF    contador
     RETURN
     
 CONFIG_INT:
@@ -153,46 +159,83 @@ CONFIG_INT:
     BCF	    RBIF		; Limpiamos bandera de int. de PORTB
     RETURN
     
-OBTENER_NIBBLE:			;    Ejemplo:
-				; Obtenemos nibble bajo
-    MOVLW   0x0F		;    Valor = 1101 0101
-    ANDWF   valor, W		;	 AND 0000 1111
-    MOVWF   nibbles		;	     0000 0101	
-				; Obtenemos nibble alto
-    MOVLW   0xF0		;     Valor = 1101 0101
-    ANDWF   valor, W		;	  AND 1111 0000
-    MOVWF   nibbles+1		;	      1101 0000
-    SWAPF   nibbles+1, F	;	      0000 1101	
+OBTENER_DEC_CEN_UNI:		;    Ejemplo:253
+    CHECK_CEN:
+    MOVLW   100			; W=100
+    SUBWF   valor,W		; valor - 100		    
+    BTFSS   STATUS,0		; Si W>f, C=0, ; W?f, C=1
+    GOTO    CHECK_DEC
+    MOVWF   valor
+    INCF    centenas
+    GOTO    CHECK_CEN
+    
+    CHECK_DEC:
+    MOVLW   10			; W=10
+    SUBWF   valor,W		; valor - 10		    
+    BTFSS   STATUS,0		; Si W>f, C=0, ; W?f, C=1
+    GOTO    CHECK_UNI
+    MOVWF   valor
+    INCF    decenas
+    GOTO    CHECK_DEC
+    
+    CHECK_UNI:
+    MOVLW   1			; W=1
+    SUBWF   valor,W		; valor - 1		    
+    BTFSS   STATUS,0		; Si W>f, C=0, ; W?f, C=1
     RETURN
+    MOVWF   valor
+    INCF    unidades
+    GOTO    CHECK_UNI
+    
     
 SET_DISPLAY:
-    MOVF    nibbles, W		; Movemos nibble bajo a W
+    MOVF    centenas, W		; Movemos centenas a W
     CALL    TABLA_7SEG		; Buscamos valor a cargar en PORTC
     MOVWF   display		; Guardamos en display
     
-    MOVF    nibbles+1, W	; Movemos nibble alto a W
+    MOVF    decenas, W		; Movemos centenas a W
     CALL    TABLA_7SEG		; Buscamos valor a cargar en PORTC
-    MOVWF   display+1		; Guardamos en display+1
+    MOVWF   display+1		; Guardamos en display
+    
+    MOVF    unidades, W		; Movemos centenas a W
+    CALL    TABLA_7SEG		; Buscamos valor a cargar en PORTC
+    MOVWF   display+2		; Guardamos en display
+    
     RETURN
     
 MOSTRAR_VOLOR:
-    BCF	    PORTD, 0		; Apagamos display de nibble alto
-    BCF	    PORTD, 1		; Apagamos display de nibble bajo
-    BTFSC   banderas, 0		; Verificamos bandera
-    GOTO    DISPLAY_1		;
+    BCF	    PORTD, 0		; Apagamos display de centenas
+    BCF	    PORTD, 1		; Apagamos display de decenas
+    BCF	    PORTD, 2		; Apagamos display de decenas
+    
+    BTFSC   banderas,1		; B0=0
+    GOTO    DISPLAY_2
+    BTFSC   banderas,0		; B0=0. B1=0 DISPLAY_0, B1=1 DISPLAY_1
+    GOTO    DISPLAY_1
+    GOTO    DISPLAY_0		;
     
     DISPLAY_0:			
 	MOVF    display, W	; Movemos display a W
 	MOVWF   PORTC		; Movemos Valor de tabla a PORTC
-	BSF	PORTD, 1	; Encendemos display de nibble bajo
-	BSF	banderas, 0	; Cambiamos bandera para cambiar el otro display en la siguiente interrupción
+	BSF	PORTD, 0	; Encendemos display de nibble bajo
+	BSF	banderas,0	; Cambiamos bandera para cambiar el otro display en la siguiente interrupción
+	BCF	banderas,1
     RETURN
 
-    DISPLAY_1:
-	MOVF    display+1, W	; Movemos display+1 a W
+    DISPLAY_1:			
+	MOVF    display+1, W	; Movemos display a W
 	MOVWF   PORTC		; Movemos Valor de tabla a PORTC
-	BSF	PORTD, 0	; Encendemos display de nibble alto
-	BCF	banderas, 0	; Cambiamos bandera para cambiar el otro display en la siguiente interrupción
+	BSF	PORTD, 1	; Encendemos display de nibble bajo
+	BCF	banderas,0	; Cambiamos bandera para cambiar el otro display en la siguiente interrupción
+	BSF	banderas,1
+    RETURN
+    
+    DISPLAY_2:			
+	MOVF    display+2, W	; Movemos display a W
+	MOVWF   PORTC		; Movemos Valor de tabla a PORTC
+	BSF	PORTD, 2	; Encendemos display de nibble bajo
+	BCF	banderas,0	; Cambiamos bandera para cambiar el otro display en la siguiente interrupción
+	BCF	banderas,1
     RETURN
     
 INT_TMR0:
