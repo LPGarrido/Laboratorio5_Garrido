@@ -1,13 +1,13 @@
 ; Archivo:	main_tmr0.s
 ; Dispositivo:	PIC16F887
-; Autor:	Christopher Chiroy
+; Autor:	Luis Pedro Garrido Jurado
 ; Compilador:	pic-as (v2.35), MPLABX V6.00
 ;                
-; Programa:	TMR0 y contador en PORTD con incrementos cada 50ms
-; Hardware:	LEDs en el PORTD		
+; Programa:	contador en el PORTA y mostrar el valor en 3 displays
+; Hardware:	LEDs en el PORTA y 3 displays en paralelo en el PORTC con selector en el portD		
 ;
-; Creado:	31 ene 2022
-; Última modificación: 07 feb 2022
+; Creado:	21 feb 2022
+; Última modificación: 21 feb 2022
     
 PROCESSOR 16F887
     
@@ -48,12 +48,11 @@ PSECT udata_shr		    ; Memoria compartida
     STATUS_TEMP:	DS 1
     
 PSECT udata_bank0
-    contador:		DS 1
     valor:		DS 1	; Contiene valor a mostrar en los displays de 7-seg
+    centenas:		DS 1	; Centenas del valor
+    decenas:		DS 1	; Decenas del valor
+    unidades:		DS 1	; Unidades del valor
     banderas:		DS 1	; Indica que display hay que encender
-    centenas:		DS 1	; 
-    decenas:		DS 1
-    unidades:		DS 1
     display:		DS 3	; Representación de cada nibble en el display de 7-seg    
     
 PSECT resVect, class=CODE, abs, delta=2
@@ -96,14 +95,14 @@ MAIN:
     BANKSEL PORTD		; Cambio a banco 00
     
 LOOP:
-    MOVF    contador,W
-    MOVWF   valor
-    CALL    OBTENER_DEC_CEN_UNI	; Guardamos nibble alto y bajo de valor
+    MOVF    PORTA,W		;W=PORTA
+    MOVWF   valor		;Valor=PORTA
+    CALL    OBTENER_DEC_CEN_UNI	; Guardamos las centenas, decenas y unidades del valor
     CALL    SET_DISPLAY		; Guardamos los valores a enviar en PORTC para mostrar valor en hex
-    CLRF    centenas
-    CLRF    decenas
-    CLRF    unidades
-    GOTO    LOOP	    
+    CLRF    centenas		; limpiamos las centenas
+    CLRF    decenas		; limpiamos las decenas
+    CLRF    unidades		; limpiamos las unidades
+    GOTO    LOOP		; regresa
     
 ;------------- SUBRUTINAS ---------------
 CONFIG_RELOJ:
@@ -130,22 +129,23 @@ CONFIG_TMR0:
     CLRF    ANSEL
     CLRF    ANSELH		; I/O digitales
     BANKSEL TRISC
+    CLRF    TRISA		; PORTA como salida
     CLRF    TRISC		; PORTC como salida
     MOVLW   0xF8
-    MOVWF   TRISD
+    MOVWF   TRISD		;RD0,RD1,RD2 
     MOVLW   0xFF
-    MOVWF   TRISB
-    BCF	    OPTION_REG,7    ; PORTB pull-ups are enabled
+    MOVWF   TRISB		; PORTB como entrada
+    BCF	    OPTION_REG,7	; PORTB pull-ups are enabled
     MOVLW   0x03	    
-    MOVWF   WPUB	    ; Habilita RB0 y RB1 los pull-ups internos
+    MOVWF   WPUB		; Habilita RB0 y RB1 los pull-ups internos
     BANKSEL PORTC
     CLRF    PORTC		; Apagamos PORTC
     BCF	    PORTD, 0		; Apagamos RD0
     BCF	    PORTD, 1		; Apagamos RD1
     BCF	    PORTD, 2		; Apagamos RD2
-    CLRF    banderas		; Limpiamos GPR
-    CLRF    valor
-    CLRF    contador
+    CLRF    banderas		; Limpiamos baderas
+    CLRF    valor		; Limpiamos valor
+    CLRF    PORTA		; Limpiamos PORTA
     RETURN
     
 CONFIG_INT:
@@ -162,30 +162,30 @@ CONFIG_INT:
 OBTENER_DEC_CEN_UNI:		;    Ejemplo:253
     CHECK_CEN:
     MOVLW   100			; W=100
-    SUBWF   valor,W		; valor - 100		    
-    BTFSS   STATUS,0		; Si W>f, C=0, ; W?f, C=1
-    GOTO    CHECK_DEC
-    MOVWF   valor
-    INCF    centenas
-    GOTO    CHECK_CEN
+    SUBWF   valor,W		; valor - 100	    
+    BTFSS   STATUS,0		; Si W>f, C=0 CHECK_DEC, ; W=<f, C=1 funcion
+    GOTO    CHECK_DEC		; 
+    MOVWF   valor		;valor = valor - 100
+    INCF    centenas		;centenas = centenas+1
+    GOTO    CHECK_CEN		;regresar a check_cen
     
     CHECK_DEC:
     MOVLW   10			; W=10
     SUBWF   valor,W		; valor - 10		    
-    BTFSS   STATUS,0		; Si W>f, C=0, ; W?f, C=1
-    GOTO    CHECK_UNI
-    MOVWF   valor
-    INCF    decenas
-    GOTO    CHECK_DEC
+    BTFSS   STATUS,0		; Si W>f,  C=0 CHECK_UNI, ; W=<f, C=1 funcion
+    GOTO    CHECK_UNI		;
+    MOVWF   valor		;valor = valor - 10
+    INCF    decenas		;decenas = decenas+1
+    GOTO    CHECK_DEC		
     
     CHECK_UNI:
     MOVLW   1			; W=1
     SUBWF   valor,W		; valor - 1		    
     BTFSS   STATUS,0		; Si W>f, C=0, ; W?f, C=1
-    RETURN
-    MOVWF   valor
-    INCF    unidades
-    GOTO    CHECK_UNI
+    RETURN			; Retorna
+    MOVWF   valor		;valor = valor - 1
+    INCF    unidades		;unidades= unidades + 1
+    GOTO    CHECK_UNI		;regresa a check_uni
     
     
 SET_DISPLAY:
@@ -193,11 +193,11 @@ SET_DISPLAY:
     CALL    TABLA_7SEG		; Buscamos valor a cargar en PORTC
     MOVWF   display		; Guardamos en display
     
-    MOVF    decenas, W		; Movemos centenas a W
+    MOVF    decenas, W		; Movemos decenas a W
     CALL    TABLA_7SEG		; Buscamos valor a cargar en PORTC
     MOVWF   display+1		; Guardamos en display
     
-    MOVF    unidades, W		; Movemos centenas a W
+    MOVF    unidades, W		; Movemos unidades a W
     CALL    TABLA_7SEG		; Buscamos valor a cargar en PORTC
     MOVWF   display+2		; Guardamos en display
     
@@ -217,23 +217,23 @@ MOSTRAR_VOLOR:
     DISPLAY_0:			
 	MOVF    display, W	; Movemos display a W
 	MOVWF   PORTC		; Movemos Valor de tabla a PORTC
-	BSF	PORTD, 0	; Encendemos display de nibble bajo
+	BSF	PORTD, 0	; 
 	BSF	banderas,0	; Cambiamos bandera para cambiar el otro display en la siguiente interrupción
-	BCF	banderas,1
+	BCF	banderas,1	;
     RETURN
 
     DISPLAY_1:			
 	MOVF    display+1, W	; Movemos display a W
 	MOVWF   PORTC		; Movemos Valor de tabla a PORTC
-	BSF	PORTD, 1	; Encendemos display de nibble bajo
+	BSF	PORTD, 1	; 
 	BCF	banderas,0	; Cambiamos bandera para cambiar el otro display en la siguiente interrupción
-	BSF	banderas,1
+	BSF	banderas,1	;
     RETURN
     
     DISPLAY_2:			
 	MOVF    display+2, W	; Movemos display a W
 	MOVWF   PORTC		; Movemos Valor de tabla a PORTC
-	BSF	PORTD, 2	; Encendemos display de nibble bajo
+	BSF	PORTD, 2	; 
 	BCF	banderas,0	; Cambiamos bandera para cambiar el otro display en la siguiente interrupción
 	BCF	banderas,1
     RETURN
@@ -244,11 +244,11 @@ INT_TMR0:
     RETURN
     
 INT_PORTB:
-    BTFSS   PORTB,0		
-    INCF    contador
-    BTFSS   PORTB,1
-    DECF    contador
-    BCF	    RBIF
+    BTFSS   PORTB,0		; RB0=0 INCF PORTA, RB0=1 evaluar
+    INCF    PORTA
+    BTFSS   PORTB,1		; RB1=0 INCF PORTA, RB1=1 evaluar
+    DECF    PORTA
+    BCF	    RBIF		; limpiar bandera
     RETURN
     
     

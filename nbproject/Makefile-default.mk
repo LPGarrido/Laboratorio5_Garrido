@@ -101,7 +101,7 @@ ${OBJECTDIR}/main_laboratorio5.o: main_laboratorio5.s  nbproject/Makefile-${CND_
 	${MP_AS} -mcpu=PIC16F887 -c \
 	-o ${OBJECTDIR}/main_laboratorio5.o \
 	main_laboratorio5.s \
-	 -D__DEBUG=1  -msummary=+mem,-psect,-class,-hex,-file,-sha1,-sha256,-xml,-xmlfull
+	 -D__DEBUG=1  -msummary=+mem,-psect,-class,-hex,-file,-sha1,-sha256,-xml,-xmlfull -fmax-errors=20 -mwarn=0 -xassembler-with-cpp
 	
 else
 ${OBJECTDIR}/main_laboratorio5.o: main_laboratorio5.s  nbproject/Makefile-${CND_CONF}.mk 
@@ -110,7 +110,7 @@ ${OBJECTDIR}/main_laboratorio5.o: main_laboratorio5.s  nbproject/Makefile-${CND_
 	${MP_AS} -mcpu=PIC16F887 -c \
 	-o ${OBJECTDIR}/main_laboratorio5.o \
 	main_laboratorio5.s \
-	 -msummary=+mem,-psect,-class,-hex,-file,-sha1,-sha256,-xml,-xmlfull
+	 -msummary=+mem,-psect,-class,-hex,-file,-sha1,-sha256,-xml,-xmlfull -fmax-errors=20 -mwarn=0 -xassembler-with-cpp
 	
 endif
 

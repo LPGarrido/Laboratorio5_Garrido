@@ -10,13 +10,13 @@
  Intel Hex-file ranges:
   0h - 5h		(dist/default/production\LABORATORIO_5_GARRIDO.X.production.hex)
   8h - 1Fh		(dist/default/production\LABORATORIO_5_GARRIDO.X.production.hex)
-  200h - 315h		(dist/default/production\LABORATORIO_5_GARRIDO.X.production.hex)
+  200h - 317h		(dist/default/production\LABORATORIO_5_GARRIDO.X.production.hex)
   400h - 427h		(dist/default/production\LABORATORIO_5_GARRIDO.X.production.hex)
   400Eh - 4011h		(dist/default/production\LABORATORIO_5_GARRIDO.X.production.hex)
  Unused ranges:
   6h - 7h
   20h - 1FFh
-  316h - 3FFh
+  318h - 3FFh
   428h - 400Dh
 
 ### Hex Memory Map ###
@@ -46,7 +46,7 @@
 000002E0 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
 000002F0 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
 00000300 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
-00000310 | H1 H1 H1 H1 H1 H1 -- -- -- -- -- -- -- -- -- --
+00000310 | H1 H1 H1 H1 H1 H1 H1 H1 -- -- -- -- -- -- -- --
 ----------------------------------------------------------
 00000400 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
 00000410 | H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1 H1
